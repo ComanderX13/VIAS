@@ -1,0 +1,42 @@
+name: Compilar APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:   # permite ejecutarlo a mano desde la pestaña Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Poner la API key de Google Maps (si existe el secreto)
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          if [ -n "$MAPS_API_KEY" ]; then
+            echo "MAPS_API_KEY=$MAPS_API_KEY" >> gradle.properties
+          fi
+
+      - name: Compilar el APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Guardar el APK para descargarlo
+        uses: actions/upload-artifact@v4
+        with:
+          name: VIAS-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
